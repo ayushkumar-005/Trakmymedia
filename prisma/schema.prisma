@@ -1,0 +1,87 @@
+// Tells Prisma to generate TypeScript code
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Points to the Neon PostgreSQL database (using the connection string from .env)
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS (Fixed choices)
+enum MediaType {
+  MOVIE
+  TV
+  BOOK
+  GAME
+}
+
+// MODELS (Tables)
+
+// User: Stores account information
+model User {
+  id           String   @id @default(cuid())
+  name         String? // Optional: user can add later
+  email        String   @unique // Must be unique, required for login
+  passwordHash String // Encrypted password
+  avatarUrl    String? // Optional: profile picture
+  createdAt    DateTime @default(now()) // Auto-set on creation
+  updatedAt    DateTime @updatedAt // Auto-updated on changes
+
+  // Relationships
+  logEntries LogEntry[] // One user can have many log entries
+}
+
+// MediaItem: Stores details about movies, TV, books, games
+model MediaItem {
+  id            String    @id @default(cuid())
+  type          MediaType // Enum: MOVIE, TV, BOOK, or GAME
+  title         String // Required: every media has a title
+  year          Int? // Optional: some media lacks clear release year
+  creators      Json? // Optional: Array like ["Lana Wachowski", "Lilly Wachowski"]
+  coverImageUrl String? // Optional: poster/cover image URL
+  description   String?   @db.Text // Optional: plot summary (Text = longer text)
+  metadataJson  Json? // Optional: flexible extra data from APIs
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relationships
+  logEntries   LogEntry[] // Many users can log this media
+  mediaSources MediaSource[] // This media can exist on multiple platforms
+}
+
+// LogEntry: Records when a user logs watching/reading/playing something
+model LogEntry {
+  id          String    @id @default(cuid())
+  userId      String // Foreign key to User
+  mediaItemId String // Foreign key to MediaItem
+  rating      Decimal?  @db.Decimal(2, 1) // Optional: 0.0 to 5.0 (one decimal place)
+  note        String?   @db.Text // Optional: user's personal thoughts
+  loggedAt    DateTime  @default(now()) // Auto-set when user clicks "Log"
+  consumedOn  DateTime? // Optional: when they actually watched/read/played it
+
+  // Relationships
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaItem MediaItem @relation(fields: [mediaItemId], references: [id], onDelete: Cascade)
+
+  @@index([userId]) // Makes searching by user faster
+  @@index([mediaItemId]) // Makes searching by media faster
+}
+
+// MediaSource: Connects media items to external databases (IMDb, RAWG, etc.)
+model MediaSource {
+  id          String   @id @default(cuid())
+  mediaItemId String // Foreign key to MediaItem
+  provider    String // e.g., "IMDb", "RAWG", "OpenLibrary"
+  externalId  String // The ID on that platform (e.g., "tt0133093")
+  externalUrl String? // Optional: direct link to source
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  mediaItem MediaItem @relation(fields: [mediaItemId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaItemId, provider]) // One media can't have duplicate providers
+  @@index([provider, externalId]) // Makes searching by external ID faster
+}

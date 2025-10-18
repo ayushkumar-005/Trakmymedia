@@ -26,3 +26,5 @@ coverage/
 # build output
 dist/
 build/
+
+/src/generated/prisma
