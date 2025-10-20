@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link"; // In-app navigation (no full page reloads)
-import { useRouter } from "next/navigation"; // push URLs from code
-import { useEffect, useRef, useState } from "react"; // React hooks
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useSession, signOut } from "next-auth/react"; // Session & logout
 import {
     Menu,
     Search,
@@ -11,6 +12,8 @@ import {
     BookText,
     Gamepad2,
     ChevronRight,
+    LogOut,
+    User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,8 +24,15 @@ import {
     SheetTrigger,
     SheetTitle,
     SheetDescription,
-} from "@/components/ui/sheet"; // shacn UI primitives
-import ActiveNavLink from "@/components/ActiveNavLink"; // Pulls ActiveNavLink
+} from "@/components/ui/sheet";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"; // Dropdown for desktop profile menu
+import ActiveNavLink from "@/components/ActiveNavLink";
 
 /* Mobile Bottom Sheet Menu */
 function MobileNav({
@@ -31,12 +41,11 @@ function MobileNav({
     navItems: { name: string; href: string; icon: React.ComponentType<any> }[];
 }) {
     const router = useRouter();
-    // State: Controls whether sheet is visible
     const [open, setOpen] = useState(false);
+    const { data: session, status } = useSession(); // Get session to show/hide logout
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
-            {/*  Trigger: Opens sheet when hamburger is clicked */}
             <SheetTrigger asChild>
                 <Button
                     variant="ghost"
@@ -48,7 +57,6 @@ function MobileNav({
                 </Button>
             </SheetTrigger>
 
-            {/* Sheet Content */}
             <SheetContent
                 side="bottom"
                 className="
@@ -65,34 +73,9 @@ function MobileNav({
                 {/* Drag Handle */}
                 <div className="mx-auto mb-3 mt-1 h-1.5 w-12 rounded-full bg-border" />
 
-                {/* Profile Link*/}
-                <Link
-                    href="/profile"
-                    onClick={() => setOpen(false)}
-                    className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/60 px-3 py-3"
-                >
-                    <Avatar className="h-10 w-10">
-                        <AvatarImage
-                            src="https://github.com/shadcn.png"
-                            alt="User"
-                        />
-                        <AvatarFallback>TM</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">
-                            Your Profile
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                            View your stats
-                        </p>
-                    </div>
-                    <ChevronRight className="ml-auto h-4 w-4 opacity-60" />
-                </Link>
-
-                {/* Nav list */}
-                <nav className="mt-5 grid">
+                {/* Nav list - Movies, TV, Books, Games */}
+                <nav className="grid">
                     {navItems.map(({ name, href, icon: Icon }) => (
-                        // Tapping a nav item: closes the sheet and pushes the route
                         <button
                             key={name}
                             onClick={() => {
@@ -115,6 +98,30 @@ function MobileNav({
                         </button>
                     ))}
                 </nav>
+
+                {/* Logout button - Only shown when authenticated */}
+                {status === "authenticated" && (
+                    <div className="mt-auto pt-4 border-t border-border">
+                        <button
+                            onClick={() => {
+                                setOpen(false);
+                                signOut({ callbackUrl: "/" });
+                            }}
+                            className="
+                flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left
+                hover:bg-destructive/10 focus-visible:outline-none
+                focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 focus-visible:ring-offset-background
+              "
+                        >
+                            <span className="grid size-9 place-items-center rounded-lg bg-card border border-border/60">
+                                <LogOut className="h-4 w-4 text-destructive" />
+                            </span>
+                            <span className="text-base font-medium text-destructive">
+                                Log out
+                            </span>
+                        </button>
+                    </div>
+                )}
             </SheetContent>
         </Sheet>
     );
@@ -123,13 +130,14 @@ function MobileNav({
 /* Main Navbar */
 export function Navbar() {
     const router = useRouter();
+    const { data: session, status } = useSession(); // Get session for desktop navbar
 
-    // Desktop & Mobile search state handlers (Icon stays visible on mobile)
+    // Search state
     const [searchOpen, setSearchOpen] = useState(false);
     const [q, setQ] = useState("");
     const searchRef = useRef<HTMLDivElement>(null);
 
-    // Close desktop search when clicking outside
+    // Close search when clicking outside
     useEffect(() => {
         function onDocClick(e: MouseEvent) {
             if (
@@ -143,7 +151,7 @@ export function Navbar() {
         return () => document.removeEventListener("mousedown", onDocClick);
     }, [searchOpen]);
 
-    // Submit search: navigate to /search?q=...
+    // Submit search
     const runSearch = () => {
         const query = q.trim();
         if (!query) return;
@@ -156,7 +164,7 @@ export function Navbar() {
         if (e.key === "Escape") setSearchOpen(false);
     };
 
-    // Nav Items: Used by both mobile and desktop
+    // Nav items
     const navItems = [
         { name: "Movies", href: "/movies", icon: Film },
         { name: "TV Shows", href: "/tv", icon: Tv },
@@ -166,7 +174,6 @@ export function Navbar() {
 
     return (
         <>
-            {/*  Bar shell & layout: When scrolled stays sticky with blurred bg */}
             <nav
                 className="
           sticky top-0 z-50 w-full
@@ -177,16 +184,14 @@ export function Navbar() {
             >
                 <div className="max-w-7xl mx-auto h-14 md:h-16 px-4 md:px-6 lg:px-8">
                     <div className="flex h-full items-center justify-between gap-3">
-                        {/* Left: Hamburger (mobile) + Brand + Desktop nav */}
+                        {/* Left: Hamburger + Brand + Desktop nav */}
                         <div className="flex items-center gap-2 md:gap-4 min-w-0">
-                            <MobileNav navItems={navItems} />{" "}
-                            {/* Brand: always visible */}
+                            <MobileNav navItems={navItems} />
                             <Link href="/" className="flex items-center">
                                 <span className="text-lg font-semibold md:text-2xl md:font-bold md:tracking-wide md:uppercase">
                                     Trakmymedia
                                 </span>
                             </Link>
-                            {/* Desktop Nav */}
                             <div className="hidden md:flex items-center gap-6 ml-4">
                                 {navItems.map((i) => (
                                     <ActiveNavLink key={i.name} href={i.href}>
@@ -196,9 +201,9 @@ export function Navbar() {
                             </div>
                         </div>
 
-                        {/* Right: Search icon (mobile & desktop) + Avatar */}
+                        {/* Right: Search + Profile/Auth buttons */}
                         <div className="flex items-center gap-1.5 md:gap-2">
-                            {/* Desktop: icon -> inline input */}
+                            {/* Desktop search */}
                             <div className="hidden md:block" ref={searchRef}>
                                 {!searchOpen ? (
                                     <Button
@@ -237,7 +242,7 @@ export function Navbar() {
                                 )}
                             </div>
 
-                            {/* Mobile: search icon toggles a row under navbar (icon stays visible) */}
+                            {/* Mobile search icon */}
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -248,22 +253,165 @@ export function Navbar() {
                                 <Search className="h-5 w-5" />
                             </Button>
 
-                            {/* Profile Avatar */}
-                            <Link href="/profile" aria-label="Your profile">
-                                <Avatar className="h-9 w-9 ring-2 ring-transparent hover:ring-primary transition">
-                                    <AvatarImage
-                                        src="https://github.com/shadcn.png"
-                                        alt="User"
-                                    />
-                                    <AvatarFallback>TM</AvatarFallback>
-                                </Avatar>
-                            </Link>
+                            {/* Auth section - Different for desktop vs mobile */}
+                            {status === "authenticated" && session?.user ? (
+                                <>
+                                    {/* DESKTOP: Avatar with dropdown menu */}
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                className="hidden md:flex relative h-9 w-9 rounded-full p-0"
+                                                aria-label="User menu"
+                                            >
+                                                <Avatar className="h-9 w-9 ring-2 ring-transparent hover:ring-primary transition">
+                                                    <AvatarImage
+                                                        src={
+                                                            session.user
+                                                                .image ||
+                                                            undefined
+                                                        }
+                                                        alt={
+                                                            session.user.name ||
+                                                            "User"
+                                                        }
+                                                    />
+                                                    <AvatarFallback>
+                                                        {session.user.name
+                                                            ?.charAt(0)
+                                                            .toUpperCase() ||
+                                                            session.user.email
+                                                                ?.charAt(0)
+                                                                .toUpperCase() ||
+                                                            "U"}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent
+                                            align="end"
+                                            className="w-56"
+                                        >
+                                            {/* User info header */}
+                                            <div className="flex items-center gap-2 p-2">
+                                                <Avatar className="h-8 w-8">
+                                                    <AvatarImage
+                                                        src={
+                                                            session.user
+                                                                .image ||
+                                                            undefined
+                                                        }
+                                                    />
+                                                    <AvatarFallback>
+                                                        {session.user.name
+                                                            ?.charAt(0)
+                                                            .toUpperCase() ||
+                                                            session.user.email
+                                                                ?.charAt(0)
+                                                                .toUpperCase() ||
+                                                            "U"}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex flex-col space-y-0.5">
+                                                    <p className="text-sm font-medium">
+                                                        {session.user.name ||
+                                                            "User"}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {session.user.email}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <DropdownMenuSeparator />
+                                            {/* View profile option */}
+                                            <DropdownMenuItem asChild>
+                                                <Link
+                                                    href="/profile"
+                                                    className="cursor-pointer"
+                                                >
+                                                    <User className="mr-2 h-4 w-4" />
+                                                    View your profile
+                                                </Link>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            {/* Logout option */}
+                                            <DropdownMenuItem
+                                                onClick={() =>
+                                                    signOut({
+                                                        callbackUrl: "/",
+                                                    })
+                                                }
+                                                className="cursor-pointer text-destructive focus:text-destructive"
+                                            >
+                                                <LogOut className="mr-2 h-4 w-4" />
+                                                Log out
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+
+                                    {/* MOBILE: Direct link to profile (no dropdown) */}
+                                    <Link
+                                        href="/profile"
+                                        aria-label="Your profile"
+                                        className="md:hidden"
+                                    >
+                                        <Avatar className="h-9 w-9 ring-2 ring-transparent active:ring-primary transition">
+                                            <AvatarImage
+                                                src={
+                                                    session.user.image ||
+                                                    undefined
+                                                }
+                                                alt={
+                                                    session.user.name || "User"
+                                                }
+                                            />
+                                            <AvatarFallback>
+                                                {session.user.name
+                                                    ?.charAt(0)
+                                                    .toUpperCase() ||
+                                                    session.user.email
+                                                        ?.charAt(0)
+                                                        .toUpperCase() ||
+                                                    "U"}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                    </Link>
+                                </>
+                            ) : (
+                                // Not authenticated: Show signup + login buttons
+                                <>
+                                    {/* DESKTOP: Both buttons visible */}
+                                    <div className="hidden md:flex items-center gap-2">
+                                        <Link href="/signup">
+                                            <Button variant="default" size="sm">
+                                                Sign up
+                                            </Button>
+                                        </Link>
+                                        <Link href="/login">
+                                            <Button variant="outline" size="sm">
+                                                Log in
+                                            </Button>
+                                        </Link>
+                                    </div>
+
+                                    {/* MOBILE: Avatar with "?" that links to login */}
+                                    <Link
+                                        href="/login"
+                                        className="md:hidden"
+                                        aria-label="Log in"
+                                    >
+                                        <Avatar className="h-9 w-9">
+                                            <AvatarFallback>?</AvatarFallback>
+                                        </Avatar>
+                                    </Link>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
             </nav>
 
-            {/* Mobile search row (below navbar) */}
+            {/* Mobile search row */}
             {searchOpen && (
                 <div className="md:hidden border-b border-border bg-background">
                     <div className="max-w-7xl mx-auto px-4 py-3">

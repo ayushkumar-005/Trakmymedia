@@ -22,15 +22,19 @@ enum MediaType {
 // User: Stores account information
 model User {
   id           String   @id @default(cuid())
+  username     String   @unique // Public identifier for social features
   name         String? // Optional: user can add later
   email        String   @unique // Must be unique, required for login
   passwordHash String // Encrypted password
   avatarUrl    String? // Optional: profile picture
+  bio          String?  @db.Text // Profile bio (for future social features)
   createdAt    DateTime @default(now()) // Auto-set on creation
   updatedAt    DateTime @updatedAt // Auto-updated on changes
 
-  // Relationships
+    // Relationships
   logEntries LogEntry[] // One user can have many log entries
+  accounts   Account[]  // One user can have multiple login methods (Google + email)
+  sessions   Session[]  // One user can be logged in on multiple devices
 }
 
 // MediaItem: Stores details about movies, TV, books, games
@@ -85,3 +89,55 @@ model MediaSource {
   @@unique([mediaItemId, provider]) // One media can't have duplicate providers
   @@index([provider, externalId]) // Makes searching by external ID faster
 }
+
+// NEXTAUTH.JS MODELS (for authentication)
+
+// Account: Stores OAuth connections (Google, GitHub, etc.)
+// When a user signs in with Google, NextAuth creates an Account record
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  // Links to User
+  type              String  // "oauth" or "credentials"
+  provider          String  // "google", "github", etc.
+  providerAccountId String  // User's ID on that provider (Google's unique ID for them)
+  refresh_token     String? @db.Text // OAuth refresh token (optional)
+  access_token      String? @db.Text // OAuth access token (optional)
+  expires_at        Int? // When the access token expires (timestamp)
+  token_type        String? // "Bearer", etc.
+  scope             String? // OAuth scopes granted
+  id_token          String? @db.Text // OAuth ID token (optional)
+  session_state     String? // OAuth session state (optional)
+
+  // Relationship: Each Account belongs to one User
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Ensure one user can't have duplicate providers
+  @@unique([provider, providerAccountId])
+  @@index([userId]) // Makes searching by user faster
+}
+
+// Session: Tracks who's currently logged in
+// When you log in, NextAuth creates a Session record with an expiry date
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique // Random token stored in user's cookie
+  userId       String   // Links to User
+  expires      DateTime // When this session expires (e.g., 30 days from now)
+
+  // Relationship: Each Session belongs to one User
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId]) // Makes searching by user faster
+}
+
+// VerificationToken: Used for email verification & password resets
+// When you request a password reset, NextAuth creates a temporary token
+model VerificationToken {
+  identifier String   // Usually an email address
+  token      String   @unique // Random token sent to user's email
+  expires    DateTime // When this token expires (e.g., 24 hours)
+
+  // Composite unique: Same email can't have duplicate active tokens
+  @@unique([identifier, token])
+}
+

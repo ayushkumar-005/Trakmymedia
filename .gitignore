@@ -1,30 +1,33 @@
-# dependencies
-/node_modules/
+# Dependencies
+node_modules/
 
-# next.js build output
-/.next/
+# Next.js
+.next/
+out/
 
-# local env files
+# Vercel
+.vercel/
+
+# Env files (keep a template only)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
-# OS files
-.DS_Store
-Thumbs.db
-Desktop.ini
-
-# log files
+# Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
 
-# coverage directory
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
+
+# Caches & artifacts
+.eslintcache
+.pnpm-store/
 coverage/
-
-# build output
-dist/
-build/
-
-/src/generated/prisma
+.playwright/
+test-results/
+*.tsbuildinfo
