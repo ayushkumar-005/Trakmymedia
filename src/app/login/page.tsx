@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 export default function LoginPage() {
     const router = useRouter();
 
-    // Form state (UPDATED: Now accepts email OR username)
+    // Form state (accepts email OR username)
     const [emailOrUsername, setEmailOrUsername] = useState("");
     const [password, setPassword] = useState("");
 
@@ -20,29 +20,25 @@ export default function LoginPage() {
 
     // Handle email/password login
     const handleSubmit = async (e: FormEvent) => {
-        e.preventDefault(); // Prevent page reload
-        setError(""); // Clear previous errors
-        setLoading(true); // Show loading state
+        e.preventDefault();
+        setError("");
+        setLoading(true);
 
         try {
-            // Call NextAuth's signIn function (credentials provider)
-            // UPDATED: Now sends emailOrUsername (supports both email and username)
             const result = await signIn("credentials", {
-                emailOrUsername, // Changed from "email"
+                emailOrUsername,
                 password,
-                redirect: false, // Don't auto-redirect, we'll handle it manually
+                redirect: false,
             });
 
-            // Check if login failed
             if (result?.error) {
-                setError("Invalid email/username or password"); // Updated error message
+                setError("Invalid email/username or password");
                 setLoading(false);
                 return;
             }
 
-            // Success! Redirect to home
             router.push("/");
-            router.refresh(); // Refresh to update session
+            router.refresh();
         } catch (err) {
             setError("Something went wrong. Please try again.");
             setLoading(false);
@@ -55,28 +51,73 @@ export default function LoginPage() {
     };
 
     return (
-        <main className="min-h-screen flex items-center justify-center px-4 py-12">
-            <div className="w-full max-w-md">
-                {/* Header */}
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold">Welcome Back</h1>
-                    <p className="text-muted-foreground mt-2">
-                        Log in to continue tracking
-                    </p>
-                </div>
+        <main className="min-h-screen grid grid-cols-1 lg:grid-cols-[45%_55%]">
+            {/* ========== LEFT SIDE: Branding (hidden on mobile) ========== */}
+            <div className="hidden lg:flex bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 p-12 flex-col justify-center relative overflow-hidden">
+                {/* Decorative blur circles */}
+                <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500/30 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl"></div>
 
-                {/* Card */}
-                <div className="bg-card border border-border rounded-xl p-6 shadow-lg">
+                <div className="relative z-10 max-w-md">
+                    {/* Desktop: Clickable heading */}
+                    <Link href="/" className="inline-block">
+                        <h1 className="text-5xl font-bold text-white mb-6 tracking-tight hover:opacity-90 transition-opacity cursor-pointer">
+                            Trakmymedia
+                        </h1>
+                    </Link>
+                    <p className="text-white/90 text-xl leading-relaxed">
+                        Track everything you watch, read, and play in one place.
+                    </p>
+                    <div className="mt-12 space-y-4 text-white/80">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl">🎥</span>
+                            <span>Movies & TV Shows</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl">📖</span>
+                            <span>Books & Comics</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl">🎮</span>
+                            <span>Video Games</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ========== RIGHT SIDE: Login Form ========== */}
+            <div className="flex items-center justify-center p-6 lg:p-12 bg-background">
+                <div className="w-full max-w-md">
+                    {/* Mobile: Clickable branding */}
+                    <div className="lg:hidden text-center mb-8">
+                        <Link href="/" className="inline-block">
+                            <h1 className="text-3xl font-bold hover:opacity-80 transition-opacity cursor-pointer">
+                                Trakmymedia
+                            </h1>
+                        </Link>
+                        <p className="text-muted-foreground mt-2">
+                            Track your media
+                        </p>
+                    </div>
+
+                    {/* Header */}
+                    <div className="mb-8">
+                        <h2 className="text-3xl font-bold">Welcome Back</h2>
+                        <p className="text-muted-foreground mt-2">
+                            Log in to continue tracking
+                        </p>
+                    </div>
+
                     {/* Error Message */}
                     {error && (
-                        <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg p-3 mb-4 text-sm">
+                        <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg p-3 mb-6 text-sm">
                             {error}
                         </div>
                     )}
 
-                    {/* Login Form */}
+                    {/* ========== LOGIN FORM ========== */}
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* Email or Username Field (UPDATED) */}
+                        {/* Email or Username Field */}
                         <div>
                             <label
                                 htmlFor="emailOrUsername"
@@ -132,7 +173,7 @@ export default function LoginPage() {
                             <div className="w-full border-t border-border"></div>
                         </div>
                         <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-card px-2 text-muted-foreground">
+                            <span className="bg-background px-2 text-muted-foreground">
                                 Or
                             </span>
                         </div>

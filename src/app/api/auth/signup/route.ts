@@ -2,25 +2,23 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { sendWelcomeEmail } from "@/lib/email"; // Import email function
 
 // POST /api/auth/signup
-// This function runs when someone submits the signup form
 export async function POST(request: Request) {
     try {
-        // Step 1: Extract data from the request body
-        // The signup form sends JSON like: { "email": "john@example.com", "password": "secret123", "name": "John" }
         const body = await request.json();
         const { username, email, password, name } = body;
 
-        // Step 2a: Validate input (check if required fields are provided)
+        // Validate input
         if (!username || !email || !password) {
             return NextResponse.json(
                 { error: "Username, email, and password are required" },
-                { status: 400 } // Bad Request
+                { status: 400 }
             );
         }
 
-        // Step 2b: Validate username format
+        // Validate username format
         const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
         if (!usernameRegex.test(username)) {
             return NextResponse.json(
@@ -31,7 +29,7 @@ export async function POST(request: Request) {
             );
         }
 
-        // Step 3: Validate email format (simple check)
+        // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             return NextResponse.json(
@@ -40,7 +38,7 @@ export async function POST(request: Request) {
             );
         }
 
-        // Step 4: Validate password strength (at least 6 characters)
+        // Validate password strength
         if (password.length < 8) {
             return NextResponse.json(
                 { error: "Password must be at least 8 characters long" },
@@ -48,47 +46,58 @@ export async function POST(request: Request) {
             );
         }
 
+        // Check if username exists
         const existingUsername = await prisma.user.findUnique({
             where: { username: username.toLowerCase() },
         });
 
-        // If username is taken, return error with HTTP 409 (Conflict)
         if (existingUsername) {
             return NextResponse.json(
                 { error: "Username already taken" },
-                { status: 409 } // 409 = Conflict (resource already exists)
+                { status: 409 }
             );
         }
 
-        // Step 6: Check if email already exists in database
+        // Check if email exists
         const existingUser = await prisma.user.findUnique({
-            where: { email: email.toLowerCase() }, // Store emails in lowercase for consistency
+            where: { email: email.toLowerCase() },
         });
 
-        // If user exists, return error
         if (existingUser) {
             return NextResponse.json(
                 { error: "Email already registered" },
-                { status: 409 } // 409 = Conflict (resource already exists)
+                { status: 409 }
             );
         }
 
-        // Step 7: Hash the password using bcrypt
-        // bcrypt.hash(plainTextPassword, saltRounds)
-        // saltRounds = 10 means the algorithm runs 2^10 = 1024 times (more = slower but more secure)
+        // Hash password
         const passwordHash = await bcrypt.hash(password, 10);
 
-        // Step 8: Create new user in database
+        // Create new user in database
         const newUser = await prisma.user.create({
             data: {
-                username: username.toLowerCase(), // Lowercase for case-insensitive lookup
-                email: email.toLowerCase(), // Store in lowercase
-                passwordHash: passwordHash, // Store the hashed password (NOT the plain text!)
-                name: name.trim(), // Optional display name (remove extra spaces)
+                username: username.toLowerCase(),
+                email: email.toLowerCase(),
+                passwordHash: passwordHash,
+                name: name?.trim() || null,
+                profileComplete: true,
             },
         });
 
-        // Step 9: Return success response (don't send back the passwordHash!)
+        // Send email AFTER user is created but BEFORE responding
+        // This way we can handle email errors gracefully
+        const emailResult = await sendWelcomeEmail(
+            newUser.email,
+            newUser.name || newUser.username
+        );
+
+        // Log email result (optional: you could return this info to client)
+        if (!emailResult.success) {
+            console.warn("⚠️ User created but email failed to send");
+            // Note: We still continue - user is created successfully
+        }
+
+        // Return success response
         return NextResponse.json(
             {
                 success: true,
@@ -99,15 +108,16 @@ export async function POST(request: Request) {
                     email: newUser.email,
                     name: newUser.name,
                 },
+                // Optional: tell client if email was sent
+                emailSent: emailResult.success,
             },
-            { status: 201 } // HTTP 201 Created
+            { status: 201 }
         );
     } catch (error) {
-        // If anything goes wrong (database error, etc.), log it and return error
         console.error("Signup error:", error);
         return NextResponse.json(
             { error: "Something went wrong. Please try again." },
-            { status: 500 } // 500 = Internal Server Error
+            { status: 500 }
         );
     }
 }

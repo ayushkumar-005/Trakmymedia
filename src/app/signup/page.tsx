@@ -11,8 +11,8 @@ export default function SignupPage() {
     const router = useRouter();
 
     // Form state
-    const [username, setUsername] = useState(""); // NEW: Required username field
-    const [name, setName] = useState(""); // CHANGED: Now optional (display name)
+    const [username, setUsername] = useState("");
+    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
@@ -22,16 +22,16 @@ export default function SignupPage() {
 
     // Handle email/password signup
     const handleSubmit = async (e: FormEvent) => {
-        e.preventDefault(); // Prevent page reload
-        setError(""); // Clear previous errors
-        setLoading(true); // Show loading state
+        e.preventDefault();
+        setError("");
+        setLoading(true);
 
         try {
-            // Step 1: Call our custom signup API (now includes username)
+            // Step 1: Call our custom signup API
             const res = await fetch("/api/auth/signup", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, email, password, name }), // UPDATED: Added username
+                body: JSON.stringify({ username, email, password, name }),
             });
 
             const data = await res.json();
@@ -45,9 +45,9 @@ export default function SignupPage() {
 
             // Step 3: Signup succeeded! Now auto-login the user
             const signInResult = await signIn("credentials", {
-                emailOrUsername: email, // UPDATED: Use emailOrUsername (supports both email/username login)
+                emailOrUsername: email,
                 password,
-                redirect: false, // Don't auto-redirect yet
+                redirect: false,
             });
 
             // Step 4: Check if login worked
@@ -61,7 +61,7 @@ export default function SignupPage() {
 
             // Step 5: Success! Redirect to home
             router.push("/");
-            router.refresh(); // Refresh to update session
+            router.refresh();
         } catch (err) {
             setError("Something went wrong. Please try again.");
             setLoading(false);
@@ -74,28 +74,60 @@ export default function SignupPage() {
     };
 
     return (
-        <main className="min-h-screen flex items-center justify-center px-4 py-12">
-            <div className="w-full max-w-md">
-                {/* Header */}
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold">Create Account</h1>
-                    <p className="text-muted-foreground mt-2">
-                        Start tracking your favorite media
+        <main className="min-h-screen grid grid-cols-1 lg:grid-cols-[45%_55%]">
+            {/* ========== LEFT SIDE: Branding (hidden on mobile) ========== */}
+            <div className="hidden lg:flex bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 p-12 flex-col justify-center relative overflow-hidden">
+                {/* Decorative blur circles */}
+                <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500/30 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl"></div>
+
+                <div className="relative z-10 max-w-md">
+                    {/* Desktop: Clickable heading */}
+                    <Link href="/" className="inline-block">
+                        <h1 className="text-5xl font-bold text-white mb-6 tracking-tight hover:opacity-90 transition-opacity cursor-pointer">
+                            Trakmymedia
+                        </h1>
+                    </Link>
+                    <p className="text-white/90 text-xl leading-relaxed mb-8">
+                        Join people tracking their entertainment journey in one
+                        place.
                     </p>
                 </div>
+            </div>
 
-                {/* Card */}
-                <div className="bg-card border border-border rounded-xl p-6 shadow-lg">
+            {/* ========== RIGHT SIDE: Signup Form ========== */}
+            <div className="flex items-center justify-center p-6 lg:p-12 bg-background">
+                <div className="w-full max-w-md">
+                    {/* Mobile: Clickable branding */}
+                    <div className="lg:hidden text-center mb-8">
+                        <Link href="/" className="inline-block">
+                            <h1 className="text-3xl font-bold hover:opacity-80 transition-opacity cursor-pointer">
+                                Trakmymedia
+                            </h1>
+                        </Link>
+                        <p className="text-muted-foreground mt-2">
+                            Track your media
+                        </p>
+                    </div>
+
+                    {/* Header */}
+                    <div className="mb-8">
+                        <h2 className="text-3xl font-bold">Create Account</h2>
+                        <p className="text-muted-foreground mt-2">
+                            Start tracking your favorite media
+                        </p>
+                    </div>
+
                     {/* Error Message */}
                     {error && (
-                        <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg p-3 mb-4 text-sm">
+                        <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg p-3 mb-6 text-sm">
                             {error}
                         </div>
                     )}
 
-                    {/* Signup Form */}
+                    {/* ========== SIGNUP FORM ========== */}
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* Username Field (NEW: Required for social features) */}
+                        {/* Username Field */}
                         <div>
                             <label
                                 htmlFor="username"
@@ -113,7 +145,7 @@ export default function SignupPage() {
                                 required
                                 minLength={3}
                                 maxLength={20}
-                                pattern="[a-zA-Z0-9_]+" // Only alphanumeric + underscore
+                                pattern="[a-zA-Z0-9_]+"
                                 disabled={loading}
                             />
                             <p className="text-xs text-muted-foreground mt-1">
@@ -121,7 +153,7 @@ export default function SignupPage() {
                             </p>
                         </div>
 
-                        {/* Name Field (UPDATED: Now optional) */}
+                        {/* Display Name Field */}
                         <div>
                             <label
                                 htmlFor="name"
@@ -202,7 +234,7 @@ export default function SignupPage() {
                             <div className="w-full border-t border-border"></div>
                         </div>
                         <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-card px-2 text-muted-foreground">
+                            <span className="bg-background px-2 text-muted-foreground">
                                 Or
                             </span>
                         </div>

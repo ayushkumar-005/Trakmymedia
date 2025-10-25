@@ -1,6 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Navbar } from "@/components/Navbar"; // Pulls navbar
+import { ConditionalNavbar } from "@/components/ConditionalNavbar"; // Handles navbar visibility
 import { Providers } from "@/components/Providers"; // Pulls session provider
 
 // Default page title and description for the whole app (can be overridden per page)
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     description: "Your personal media tracker",
 };
 
-// Global layout
+// Global layout (server component)
 export default function RootLayout({
     children,
 }: {
@@ -19,7 +19,7 @@ export default function RootLayout({
         <html lang="en">
             <body className="min-h-dvh antialiased bg-background text-foreground">
                 <Providers>
-                    <Navbar />
+                    <ConditionalNavbar />
                     {children}
                 </Providers>
             </body>

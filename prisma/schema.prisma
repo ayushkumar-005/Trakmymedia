@@ -21,17 +21,19 @@ enum MediaType {
 
 // User: Stores account information
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique // Public identifier for social features
-  name         String? // Optional: user can add later
-  email        String   @unique // Must be unique, required for login
-  passwordHash String // Encrypted password
-  avatarUrl    String? // Optional: profile picture
-  bio          String?  @db.Text // Profile bio (for future social features)
-  createdAt    DateTime @default(now()) // Auto-set on creation
-  updatedAt    DateTime @updatedAt // Auto-updated on changes
+  id              String   @id @default(cuid())
+  username        String?  @unique // optional (null until profile completed)
+  name            String? // Optional: user can add later
+  email           String   @unique // Must be unique, required for login
+  passwordHash    String? // Optional (OAuth users don't have passwords initially)
+  image       String? // Optional: profile picture
+  emailVerified   DateTime? // Will be NULL
+  bio             String?  @db.Text // Profile bio (for future social features)
+  profileComplete Boolean  @default(false) // Track if user finished setup
+  createdAt       DateTime @default(now()) // Auto-set on creation
+  updatedAt       DateTime @updatedAt // Auto-updated on changes
 
-    // Relationships
+  // Relationships
   logEntries LogEntry[] // One user can have many log entries
   accounts   Account[]  // One user can have multiple login methods (Google + email)
   sessions   Session[]  // One user can be logged in on multiple devices
